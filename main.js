@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const PI = 3.141
 
-const fov = 30;
+const fov = 70;
 const nearClippingPlane = 0.01;
 const farClippingPlane = 10;
 
@@ -15,40 +15,35 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
-// create lights
-const directionalLight = new THREE.DirectionalLight(0xffffff,3);
-directionalLight.position.set(1, 4, 4);
-directionalLight.castShadow = true;
-directionalLight.shadow.camera.near = nearClippingPlane;
-directionalLight.shadow.camera.far = farClippingPlane;
-// by default the camera bounds are big and we get a blurry shadow -> make them smaller
-directionalLight.shadow.camera.left = -0.2;
-directionalLight.shadow.camera.right = 0.2;
-directionalLight.shadow.camera.top = 0.2;
-directionalLight.shadow.camera.bottom = -0.2;
-console.log(directionalLight.shadow.camera.left, directionalLight.shadow.camera.right,
-	directionalLight.shadow.camera.top, directionalLight.shadow.camera.bottom);
+scene.add(...createLights());
 
-scene.add(directionalLight);
-const hemisphereLight = new THREE.HemisphereLight( 0xffffbb, 0x080820, 2 );
-scene.add(hemisphereLight);
+const textureLoader = new THREE.TextureLoader();
+textureLoader.load("resources/fireplace_2k.jpg", (hdriTexture) => {
+	hdriTexture.colorSpace = THREE.SRGBColorSpace;
+	hdriTexture.mapping = THREE.EquirectangularReflectionMapping;
+	scene.background = hdriTexture;
+	scene.environment = hdriTexture;
+	scene.backgroundBlurriness = 0.5;
+	scene.backgroundIntensity = 0.5;
+});
 
 // materials
-const snowMaterial = new THREE.MeshStandardMaterial( { color: 0xccccff, emissive: 0x9999aa } );
+const snowMaterial = new THREE.MeshStandardMaterial( { color: 0xccccff, side: THREE.DoubleSide } );
 
 // create objects
 const sphere = create_sphere();
 scene.add(sphere);
-scene.add(create_table());
+scene.add(...create_table());
 scene.add(...create_stand());
 scene.add(create_snow());
+scene.add(...create_house());
 
-camera.position.z = 0.7;
-camera.position.y = 0.3;
-camera.rotation.x = PI * -0.09;
+camera.position.z = 0.14;
+camera.position.y = 0.13;
 const cameraControls = new OrbitControls(camera, renderer.domElement);
 cameraControls.autoRotate = true;
-cameraControls.autoRotateSpeed = 1;
+cameraControls.autoRotateSpeed = 0;
+cameraControls.target.copy(sphere.position);
 
 function render(time) {
 	time *= 0.001; // convert to seconds
@@ -62,7 +57,6 @@ function render(time) {
 		camera.updateProjectionMatrix();
 	}
 
-	cameraControls.target = sphere.position;
 	cameraControls.update();
 
 	renderer.render(scene, camera);
@@ -72,17 +66,53 @@ function render(time) {
 
 requestAnimationFrame(render);
 
+function createLights() {
+	const directionalLight = new THREE.DirectionalLight(0xffffff,3);
+	directionalLight.position.set(1, 4, 4);
+	directionalLight.castShadow = true;
+	directionalLight.shadow.camera.near = nearClippingPlane;
+	directionalLight.shadow.camera.far = farClippingPlane;
+	// by default the camera bounds are big and we get a blurry shadow -> make them smaller
+	directionalLight.shadow.camera.left = -0.2;
+	directionalLight.shadow.camera.right = 0.2;
+	directionalLight.shadow.camera.top = 0.2;
+	directionalLight.shadow.camera.bottom = -0.2;
+	directionalLight.shadow.mapSize = new THREE.Vector2(1024, 1024);
+
+	const directionalLight2 = new THREE.DirectionalLight(0xffffff,1);
+	directionalLight2.position.set(1, 4, -1);
+	directionalLight2.castShadow = true;
+	directionalLight2.shadow.camera.near = nearClippingPlane;
+	directionalLight2.shadow.camera.far = farClippingPlane;
+	// by default the camera bounds are big and we get a blurry shadow -> make them smaller
+	directionalLight2.shadow.camera.left = -0.15;
+	directionalLight2.shadow.camera.right = 0.15;
+	directionalLight2.shadow.camera.top = 0.15;
+	directionalLight2.shadow.camera.bottom = -0.15;
+	directionalLight2.shadow.mapSize = new THREE.Vector2(1024, 1024);
+	
+	const hemisphereLight = new THREE.HemisphereLight(0xffffbb, 0x080820, 4);
+
+	return [directionalLight, directionalLight2, hemisphereLight];
+}
+
 function create_table() {
-	const mesh = new THREE.Mesh(
-		new THREE.PlaneGeometry(1, 1),
-		new THREE.MeshStandardMaterial( { color: 0x421b13, roughness: 0.7 } ),
-	);
-	mesh.rotation.x = PI * -0.5;
-	mesh.rotation.z = PI * 0.25;
+	const geometry = new THREE.PlaneGeometry(1, 1);
+	const material = new THREE.MeshStandardMaterial( { color: 0x421b13, roughness: 0.7 } );
 
-	mesh.receiveShadow = true;
+	const up = new THREE.Mesh(geometry, material);
+	up.rotation.x = PI * -0.5;
+	up.rotation.z = PI * 0.25;
 
-	return mesh;
+	const down = new THREE.Mesh(geometry, material);
+	down.rotation.x = PI * 0.5;
+	down.rotation.z = PI * 0.25;
+	down.position.y = -0.0001; // avoid z-fighting
+
+	up.receiveShadow = true;
+	down.receiveShadow = true;
+
+	return [up, down];
 }
 
 function create_sphere() {
@@ -91,6 +121,7 @@ function create_sphere() {
 		new THREE.MeshPhysicalMaterial({
 			roughness: 0,
 			transmission: 1,
+			ior: 1,
 		}),
 	);
 	mesh.position.y = 0.11;
@@ -139,7 +170,7 @@ function create_stand() {
 
 function create_snow() {
 	const mesh = new THREE.Mesh(
-		new THREE.CylinderGeometry(0.09, 0.07, 0.035, 40),
+		new THREE.CylinderGeometry(0.09, 0.068, 0.035, 40),
 		snowMaterial,
 	);
 	mesh.position.y = 0.055;
@@ -148,4 +179,62 @@ function create_snow() {
 	mesh.castShadow = true;
 
 	return mesh;
+}
+
+function create_house() {
+	const woodMaterial = new THREE.MeshStandardMaterial( {color: 0x221816 } );
+
+	const block = new THREE.Mesh(
+		new THREE.BoxGeometry(0.03, 0.013, 0.04),
+		woodMaterial,
+	);
+	block.position.y = 0.078;
+	block.rotation.y = -0.1 * PI;
+
+	const triangleGeometry = new THREE.BufferGeometry().setFromPoints([
+		new THREE.Vector3(0.0, 0.01, 0.0),
+		new THREE.Vector3(0.0, 0.00, 0.015),
+		new THREE.Vector3(0.0, 0.00, -0.015),
+	]);
+	triangleGeometry.computeVertexNormals();
+
+	const triangleFront = new THREE.Mesh(triangleGeometry, woodMaterial,);
+	triangleFront.position.y = 0.078 + 0.0065;
+	triangleFront.position.z = 0.019;
+	triangleFront.position.x = -0.006;
+	triangleFront.rotation.y = (-0.1 - 0.5) * PI;
+	
+	const triangleBack = new THREE.Mesh(triangleGeometry, woodMaterial,);
+	triangleBack.position.y = 0.078 + 0.0065;
+	triangleBack.position.z = -0.019;
+	triangleBack.position.x = +0.006;
+	triangleBack.rotation.y = (-0.1 + 0.5) * PI;
+
+	const roofGeometry = new THREE.BoxGeometry(0.025, 0.002, 0.043);
+	const roofLeft = new THREE.Mesh(roofGeometry, snowMaterial);
+	roofLeft.position.y = 0.078 + 0.01;
+	roofLeft.position.x = 0.0093;
+	roofLeft.position.z = 0.0033;
+	roofLeft.rotation.y = (-0.1) * PI;
+	roofLeft.rotation.z = (-0.185) * PI;
+
+	const roofRight = new THREE.Mesh(roofGeometry, snowMaterial);
+	roofRight.position.y = 0.078 + 0.01;
+	roofRight.position.x = -0.0093;
+	roofRight.position.z = -0.0033;
+	roofRight.rotation.y = (-0.1 + 1) * PI;
+	roofRight.rotation.z = (-0.185) * PI;
+
+	block.receiveShadow = true;
+	block.castShadow = true;
+	triangleFront.receiveShadow = true;
+	triangleFront.castShadow = true;
+	triangleBack.receiveShadow = true;
+	triangleBack.castShadow = true;
+	roofLeft.receiveShadow = true;
+	roofLeft.castShadow = true;
+	roofRight.receiveShadow = true;
+	roofRight.castShadow = true;
+
+	return [block, triangleFront, triangleBack, roofLeft, roofRight];
 }
