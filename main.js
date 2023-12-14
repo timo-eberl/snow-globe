@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 
 const PI = 3.141
 
@@ -29,8 +30,13 @@ textureLoader.load("resources/fireplace_2k.jpg", (hdriTexture) => {
 
 // materials
 const snowMaterial = new THREE.MeshStandardMaterial( { color: 0xccccff, side: THREE.DoubleSide } );
+const darkerSnowMaterial = new THREE.MeshStandardMaterial( { color: 0xbbbbee, side: THREE.DoubleSide } );
 
 // create objects
+const objLoader = new OBJLoader();
+objLoader.load("resources/tree.obj", (mesh) => {
+	scene.add(...createTrees(mesh));
+});
 const sphere = create_sphere();
 scene.add(sphere);
 scene.add(...create_table());
@@ -68,7 +74,7 @@ requestAnimationFrame(render);
 
 function createLights() {
 	const directionalLight = new THREE.DirectionalLight(0xffffff,3);
-	directionalLight.position.set(1, 4, 4);
+	directionalLight.position.set(5, 4, 1);
 	directionalLight.castShadow = true;
 	directionalLight.shadow.camera.near = nearClippingPlane;
 	directionalLight.shadow.camera.far = farClippingPlane;
@@ -80,15 +86,15 @@ function createLights() {
 	directionalLight.shadow.mapSize = new THREE.Vector2(1024, 1024);
 
 	const directionalLight2 = new THREE.DirectionalLight(0xffffff,1);
-	directionalLight2.position.set(1, 4, -1);
+	directionalLight2.position.set(-1, 4, -1);
 	directionalLight2.castShadow = true;
 	directionalLight2.shadow.camera.near = nearClippingPlane;
 	directionalLight2.shadow.camera.far = farClippingPlane;
 	// by default the camera bounds are big and we get a blurry shadow -> make them smaller
-	directionalLight2.shadow.camera.left = -0.15;
-	directionalLight2.shadow.camera.right = 0.15;
-	directionalLight2.shadow.camera.top = 0.15;
-	directionalLight2.shadow.camera.bottom = -0.15;
+	directionalLight2.shadow.camera.left = -0.2;
+	directionalLight2.shadow.camera.right = 0.2;
+	directionalLight2.shadow.camera.top = 0.2;
+	directionalLight2.shadow.camera.bottom = -0.2;
 	directionalLight2.shadow.mapSize = new THREE.Vector2(1024, 1024);
 	
 	const hemisphereLight = new THREE.HemisphereLight(0xffffbb, 0x080820, 4);
@@ -171,7 +177,7 @@ function create_stand() {
 function create_snow() {
 	const mesh = new THREE.Mesh(
 		new THREE.CylinderGeometry(0.09, 0.068, 0.035, 40),
-		snowMaterial,
+		darkerSnowMaterial,
 	);
 	mesh.position.y = 0.055;
 
@@ -238,3 +244,71 @@ function create_house() {
 
 	return [block, triangleFront, triangleBack, roofLeft, roofRight];
 }
+
+function createTrees(tree) {
+
+	tree = tree.children[0];
+	tree.castShadow = true;
+
+	const firstTree = tree.clone();
+	let scale = 0.024;
+	firstTree.scale.set(scale,scale*0.8,scale);
+	firstTree.position.y = 0.075;
+	firstTree.position.x = -0.02;
+	firstTree.position.z = -0.02;
+
+	console.log(tree);
+
+	const secondTree = tree.clone();
+	scale = 0.02;
+	secondTree.scale.set(scale,scale*0.8,scale);
+	secondTree.position.y = 0.075;
+	secondTree.position.x = -0.04;
+	secondTree.position.z = 0.00;
+
+	const thirdTree = tree.clone();
+	scale = 0.01;
+	thirdTree.scale.set(scale,scale*0.7,scale);
+	thirdTree.position.y = 0.075;
+	thirdTree.position.x = -0.05;
+	thirdTree.position.z = 0.02;
+
+	const fourthTree = tree.clone();
+	scale = 0.018;
+	fourthTree.scale.set(scale,scale*0.9,scale);
+	fourthTree.position.y = 0.075;
+	fourthTree.position.x = 0.03;
+	fourthTree.position.z = -0.02;
+
+	const fifthTree = tree.clone();
+	scale = 0.016;
+	fifthTree.scale.set(scale,scale*0.8,scale);
+	fifthTree.position.y = 0.075;
+	fifthTree.position.x = 0.01;
+	fifthTree.position.z = -0.03;
+
+	const sixthTree = tree.clone();
+	scale = 0.018;
+	sixthTree.scale.set(scale,scale*0.6,scale);
+	sixthTree.position.y = 0.075;
+	sixthTree.position.x = 0.04;
+	sixthTree.position.z = 0.01;
+
+	const seventhTree = tree.clone();
+	scale = 0.01;
+	seventhTree.scale.set(scale,scale*0.8,scale);
+	seventhTree.position.y = 0.075;
+	seventhTree.position.x = 0.07;
+	seventhTree.position.z = -0.01;
+
+	const eigthTree = tree.clone();
+	scale = 0.008;
+	eigthTree.scale.set(scale,scale*0.7,scale);
+	eigthTree.position.y = 0.075;
+	eigthTree.position.x = 0.02;
+	eigthTree.position.z = 0.05;
+
+	return [
+		firstTree, secondTree, thirdTree, fourthTree, fifthTree, sixthTree, seventhTree, eigthTree
+	];
+};
