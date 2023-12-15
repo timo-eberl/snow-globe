@@ -42,13 +42,13 @@ const houseSpotLight = lights[0];
 scene.add(...lights);
 
 // add objects
-const spheres = create_sphere();
+const spheres = createSphere();
 const sphere = spheres[0];
 scene.add(...spheres);
-scene.add(...create_table());
-scene.add(...create_stand());
-scene.add(...create_snow());
-scene.add(...create_house());
+scene.add(...createTable());
+scene.add(...createStand());
+scene.add(...createSnow());
+scene.add(...createHouse());
 
 const particles = createParticles();
 scene.add(...particles);
@@ -208,7 +208,7 @@ function createLights() {
 	];
 }
 
-function create_table() {
+function createTable() {
 	const geometry = new THREE.PlaneGeometry(1, 1);
 	const material = new THREE.MeshStandardMaterial({ color: 0x421b13, roughness: 0.7, fog: false });
 
@@ -227,7 +227,7 @@ function create_table() {
 	return [up, down];
 }
 
-function create_sphere() {
+function createSphere() {
 	const outside = new THREE.Mesh(
 		new THREE.SphereGeometry(0.1, 40, 10),
 		new THREE.MeshPhysicalMaterial({
@@ -254,7 +254,7 @@ function create_sphere() {
 	return [outside, inside];
 }
 
-function create_stand() {
+function createStand() {
 	const height = 0.035;
 	const ringWidth = 0.003;
 
@@ -291,7 +291,7 @@ function create_stand() {
 	return [wood, upperRing, lowerRing];
 }
 
-function create_snow() {
+function createSnow() {
 	const mesh = new THREE.Mesh(
 		new THREE.CylinderGeometry(0.09, 0.067, 0.035, 30),
 		darkerSnowMaterial,
@@ -304,7 +304,7 @@ function create_snow() {
 	return [mesh];
 }
 
-function create_house() {
+function createHouse() {
 	const woodMaterial = new THREE.MeshStandardMaterial( { color: 0x553322, fog: false } );
 
 	const block = new THREE.Mesh(
