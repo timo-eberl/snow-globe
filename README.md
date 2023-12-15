@@ -2,6 +2,20 @@
 
 A snow globe made with three.js for the lecture "113447a Computer Graphics".
 
+## Checklist
+
+- [x] Responsive Design
+- [x] Orbit Controls -> Camera orbits around a point inside the globe
+- [x] Import at least one 3D model -> tree
+- [x] Materials
+- [x] Texture -> HDRI Map for reflections
+- [x] Light -> directional lights, spot light inside house
+- [x] Camera
+- [x] Shadows
+- [ ] Fog
+- [ ] Simple animation
+- [ ] Shader
+
 ## Run with Visual Studio Code
 
 1. Install the extension [Live Server (Five Server)](https://open-vsx.org/vscode/item?itemName=yandeu.five-server)
