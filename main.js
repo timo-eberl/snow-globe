@@ -6,7 +6,7 @@ const PI = 3.141
 
 const fov = 70;
 const nearClippingPlane = 0.01;
-const farClippingPlane = 10;
+const farClippingPlane = 100;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
@@ -14,7 +14,9 @@ const camera = new THREE.PerspectiveCamera(
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// update the shadow map only one time
+renderer.shadowMap.autoUpdate = false;
+renderer.shadowMap.needsUpdate = true;
 document.body.appendChild(renderer.domElement);
 
 scene.add(...createLights());
@@ -35,7 +37,7 @@ const darkerSnowMaterial = new THREE.MeshStandardMaterial( { color: 0xbbbbee, si
 
 // create objects
 const objLoader = new OBJLoader();
-objLoader.load("resources/tree.obj", (mesh) => {
+objLoader.load("resources/tree_optimized_2.obj", (mesh) => {
 	scene.add(...createTrees(mesh));
 });
 const sphere = create_sphere();
@@ -48,6 +50,10 @@ scene.add(...create_house());
 camera.position.z = 0.14;
 camera.position.y = 0.13;
 const cameraControls = new OrbitControls(camera, renderer.domElement);
+// limit the angles, because on when looking from low or high angles somehow the performance
+// completely breaks down
+cameraControls.minPolarAngle = PI * 0.28;
+cameraControls.maxPolarAngle = PI * 0.6;
 cameraControls.autoRotate = true;
 cameraControls.autoRotateSpeed = 0;
 cameraControls.target.copy(sphere.position);
@@ -74,8 +80,10 @@ function render(time) {
 requestAnimationFrame(render);
 
 function createLights() {
+	const shadowMapSize = 1024;
+
 	const directionalLight = new THREE.DirectionalLight(0xffffff,3);
-	directionalLight.position.set(5, 4, 1);
+	directionalLight.position.set(0.5, 0.4, 0.1);
 	directionalLight.castShadow = true;
 	directionalLight.shadow.camera.near = nearClippingPlane;
 	directionalLight.shadow.camera.far = farClippingPlane;
@@ -84,7 +92,7 @@ function createLights() {
 	directionalLight.shadow.camera.right = 0.2;
 	directionalLight.shadow.camera.top = 0.2;
 	directionalLight.shadow.camera.bottom = -0.2;
-	directionalLight.shadow.mapSize = new THREE.Vector2(1024, 1024);
+	directionalLight.shadow.mapSize = new THREE.Vector2(shadowMapSize, shadowMapSize);
 
 	const directionalLight2 = new THREE.DirectionalLight(0xffffff,1);
 	directionalLight2.position.set(-1, 4, -1);
@@ -96,22 +104,27 @@ function createLights() {
 	directionalLight2.shadow.camera.right = 0.2;
 	directionalLight2.shadow.camera.top = 0.2;
 	directionalLight2.shadow.camera.bottom = -0.2;
-	directionalLight2.shadow.mapSize = new THREE.Vector2(1024, 1024);
+	directionalLight2.shadow.mapSize = new THREE.Vector2(shadowMapSize, shadowMapSize);
 
-	const houseLight = new THREE.PointLight(0xff00ff, 0.5, 0.5);
-	houseLight.position.set(0,0.08,0);
-	houseLight.shadow.castShadow = true;
-	houseLight.shadow.camera.near = 0.01;
-	houseLight.shadow.camera.far = 0.1;
-	houseLight.shadow.mapSize = new THREE.Vector2(2048, 2048);
-	const helper = new THREE.CameraHelper(houseLight.shadow.camera);
-	
-	scene.add(helper);
-	
-	const hemisphereLight = new THREE.HemisphereLight(0xffffbb, 0x080820, 4);
+	const houseSpotLight = new THREE.SpotLight(0xff5500, 0.2, 0.07);
+	houseSpotLight.position.set(-0.0025,0.08,0.008);
+	houseSpotLight.angle = 0.2 * PI;
+	houseSpotLight.castShadow = true;
+	houseSpotLight.shadow.camera.near = 0.001;
+	houseSpotLight.shadow.camera.far = 0.1;
+	houseSpotLight.shadow.mapSize = new THREE.Vector2(shadowMapSize, shadowMapSize);
+	houseSpotLight.target.position.set(-0.3,-0.3,1);
+	scene.add(houseSpotLight.target);
 
-	return [houseLight];
-	return [directionalLight, directionalLight2, hemisphereLight, houseLight];
+	const houseLight = new THREE.PointLight(0xff5500, 1, 0.01);
+	houseLight.position.set(-0.003,0.075,0.01);
+	
+	const hemisphereLight = new THREE.HemisphereLight(0xffffbb, 0x080820, 1);
+
+	return [
+		directionalLight, directionalLight2, hemisphereLight, houseLight,
+		houseSpotLight, houseSpotLight.target
+	];
 }
 
 function create_table() {
@@ -135,7 +148,7 @@ function create_table() {
 
 function create_sphere() {
 	const mesh = new THREE.Mesh(
-		new THREE.SphereGeometry(0.1, 40, 40),
+		new THREE.SphereGeometry(0.1, 25, 25),
 		new THREE.MeshPhysicalMaterial({
 			roughness: 0,
 			transmission: 1,
@@ -143,8 +156,7 @@ function create_sphere() {
 		}),
 	);
 	mesh.position.y = 0.11;
-
-	mesh.receiveShadow = true;
+	console.log(mesh);
 
 	return mesh;
 }
@@ -154,7 +166,7 @@ function create_stand() {
 	const ringWidth = 0.003;
 
 	const wood = new THREE.Mesh(
-		new THREE.CylinderGeometry(0.07, 0.08, 0.035, 40),
+		new THREE.CylinderGeometry(0.07, 0.08, 0.035, 20),
 		new THREE.MeshStandardMaterial( { color: 0x311815, roughness: 0.4 } ),
 	);
 	wood.position.y = height * 0.5;
@@ -163,14 +175,14 @@ function create_stand() {
 		color: 0xe8b873, metalness: 1, roughness: 0.6
 	});
 	const upperRing = new THREE.Mesh(
-		new THREE.TorusGeometry(0.07, ringWidth, 20, 40),
+		new THREE.TorusGeometry(0.07, ringWidth, 4, 30),
 		ringMaterial,
 	);
 	upperRing.position.y = height;
 	upperRing.rotation.x = PI * -0.5;
 
 	const lowerRing = new THREE.Mesh(
-		new THREE.TorusGeometry(0.08, ringWidth, 20, 40),
+		new THREE.TorusGeometry(0.08, ringWidth, 4, 30),
 		ringMaterial,
 	);
 	lowerRing.position.y = ringWidth;
@@ -282,11 +294,13 @@ function create_house() {
 function createTrees(tree) {
 
 	tree = tree.children[0];
+	tree.material = snowMaterial;
 	tree.castShadow = true;
 
 	const firstTree = tree.clone();
 	let scale = 0.024;
 	firstTree.scale.set(scale,scale*0.8,scale);
+	firstTree.rotation.y = -0.32 * PI;
 	firstTree.position.y = 0.075;
 	firstTree.position.x = -0.02;
 	firstTree.position.z = -0.02;
@@ -294,6 +308,7 @@ function createTrees(tree) {
 	const secondTree = tree.clone();
 	scale = 0.02;
 	secondTree.scale.set(scale,scale*0.8,scale);
+	secondTree.rotation.y = 0.9 * PI;
 	secondTree.position.y = 0.075;
 	secondTree.position.x = -0.04;
 	secondTree.position.z = 0.00;
@@ -301,7 +316,7 @@ function createTrees(tree) {
 	const thirdTree = tree.clone();
 	scale = 0.01;
 	thirdTree.scale.set(scale,scale*0.7,scale);
-	thirdTree.position.y = 0.075;
+	thirdTree.position.y = 0.074;
 	thirdTree.position.x = -0.05;
 	thirdTree.position.z = 0.02;
 
@@ -313,6 +328,7 @@ function createTrees(tree) {
 	fourthTree.position.z = -0.02;
 
 	const fifthTree = tree.clone();
+	fifthTree.rotation.y = 0.5 * PI;
 	scale = 0.016;
 	fifthTree.scale.set(scale,scale*0.8,scale);
 	fifthTree.position.y = 0.075;
@@ -321,6 +337,7 @@ function createTrees(tree) {
 
 	const sixthTree = tree.clone();
 	scale = 0.018;
+	sixthTree.rotation.y = -0.4 * PI;
 	sixthTree.scale.set(scale,scale*0.6,scale);
 	sixthTree.position.y = 0.075;
 	sixthTree.position.x = 0.04;
@@ -329,14 +346,15 @@ function createTrees(tree) {
 	const seventhTree = tree.clone();
 	scale = 0.01;
 	seventhTree.scale.set(scale,scale*0.8,scale);
-	seventhTree.position.y = 0.075;
+	seventhTree.position.y = 0.074;
 	seventhTree.position.x = 0.07;
 	seventhTree.position.z = -0.01;
 
 	const eigthTree = tree.clone();
 	scale = 0.008;
+	eigthTree.rotation.y = -0.8 * PI;
 	eigthTree.scale.set(scale,scale*0.7,scale);
-	eigthTree.position.y = 0.075;
+	eigthTree.position.y = 0.074;
 	eigthTree.position.x = 0.02;
 	eigthTree.position.z = 0.05;
 
