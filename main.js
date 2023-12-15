@@ -16,10 +16,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 // update the shadow map only one time
 renderer.shadowMap.autoUpdate = false;
-renderer.shadowMap.needsUpdate = true;
 document.body.appendChild(renderer.domElement);
-
-scene.add(...createLights());
 
 const textureLoader = new THREE.TextureLoader();
 textureLoader.load("resources/fireplace_2k.jpg", (hdriTexture) => {
@@ -35,10 +32,13 @@ textureLoader.load("resources/fireplace_2k.jpg", (hdriTexture) => {
 const snowMaterial = new THREE.MeshStandardMaterial( { color: 0xccccff, side: THREE.DoubleSide } );
 const darkerSnowMaterial = new THREE.MeshStandardMaterial( { color: 0xbbbbee, side: THREE.DoubleSide } );
 
+scene.add(...createLights());
+
 // create objects
 const objLoader = new OBJLoader();
 objLoader.load("resources/tree_optimized_2.obj", (mesh) => {
 	scene.add(...createTrees(mesh));
+	renderer.shadowMap.needsUpdate = true;
 });
 const sphere = create_sphere();
 scene.add(sphere);
@@ -46,6 +46,8 @@ scene.add(...create_table());
 scene.add(...create_stand());
 scene.add(create_snow());
 scene.add(...create_house());
+
+renderer.shadowMap.needsUpdate = true;
 
 camera.position.z = 0.14;
 camera.position.y = 0.13;
@@ -148,7 +150,7 @@ function create_table() {
 
 function create_sphere() {
 	const mesh = new THREE.Mesh(
-		new THREE.SphereGeometry(0.1, 25, 25),
+		new THREE.SphereGeometry(0.1, 18, 26),
 		new THREE.MeshPhysicalMaterial({
 			roughness: 0,
 			transmission: 1,
@@ -200,7 +202,7 @@ function create_stand() {
 
 function create_snow() {
 	const mesh = new THREE.Mesh(
-		new THREE.CylinderGeometry(0.09, 0.068, 0.035, 40),
+		new THREE.CylinderGeometry(0.09, 0.068, 0.035, 30),
 		darkerSnowMaterial,
 	);
 	mesh.position.y = 0.055;
