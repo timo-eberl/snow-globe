@@ -18,6 +18,8 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.autoUpdate = false;
 document.body.appendChild(renderer.domElement);
 
+window.addEventListener("resize", resize);
+
 const textureLoader = new THREE.TextureLoader();
 textureLoader.load("resources/fireplace_2k.jpg", (hdriTexture) => {
 	hdriTexture.colorSpace = THREE.SRGBColorSpace;
@@ -60,17 +62,11 @@ cameraControls.autoRotate = true;
 cameraControls.autoRotateSpeed = 0;
 cameraControls.target.copy(sphere.position);
 
+let lastTime = 0;
 function render(time) {
 	time *= 0.001; // convert to seconds
-	
-	// resize if needed
-	const needResize = renderer.domElement.width !== window.innerWidth
-		|| renderer.domElement.height !== window.innerHeight
-	if (needResize) {
-		renderer.setSize(window.innerWidth, window.innerHeight);
-		camera.aspect = window.innerWidth / window.innerHeight;
-		camera.updateProjectionMatrix();
-	}
+	let delta = time - lastTime;
+	lastTime = time;
 
 	cameraControls.update();
 
@@ -85,6 +81,12 @@ function render(time) {
 }
 
 requestAnimationFrame(render);
+
+function resize() {
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+}
 
 function createLights() {
 	const shadowMapSize = 1024;
