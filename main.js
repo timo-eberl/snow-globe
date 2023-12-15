@@ -28,9 +28,9 @@ textureLoader.load("resources/fireplace_2k.jpg", (hdriTexture) => {
 	scene.backgroundIntensity = 0.5;
 });
 
-// materials
-const snowMaterial = new THREE.MeshStandardMaterial( { color: 0xccccff, side: THREE.DoubleSide } );
-const darkerSnowMaterial = new THREE.MeshStandardMaterial( { color: 0xbbbbee, side: THREE.DoubleSide } );
+// materials that will be reused
+const snowMaterial = new THREE.MeshStandardMaterial( { color: 0xccccff } );
+const darkerSnowMaterial = new THREE.MeshStandardMaterial( { color: 0xbbbbee } );
 
 scene.add(...createLights());
 
@@ -73,6 +73,11 @@ function render(time) {
 	}
 
 	cameraControls.update();
+
+	// rotate the glass sphere in a way that the same side faces towards the camera
+	// this way we can save geometry at the side we are looking at without it being obvious
+	sphere.lookAt(camera.position);
+	sphere.rotateX(0.5 * PI);
 
 	renderer.render(scene, camera);
 
@@ -150,7 +155,7 @@ function create_table() {
 
 function create_sphere() {
 	const mesh = new THREE.Mesh(
-		new THREE.SphereGeometry(0.1, 18, 26),
+		new THREE.SphereGeometry(0.1, 40, 10),
 		new THREE.MeshPhysicalMaterial({
 			roughness: 0,
 			transmission: 1,
@@ -158,7 +163,6 @@ function create_sphere() {
 		}),
 	);
 	mesh.position.y = 0.11;
-	console.log(mesh);
 
 	return mesh;
 }
@@ -214,7 +218,7 @@ function create_snow() {
 }
 
 function create_house() {
-	const woodMaterial = new THREE.MeshStandardMaterial( {color: 0x221816 } );
+	const woodMaterial = new THREE.MeshStandardMaterial( {color: 0x553322 } );
 
 	const block = new THREE.Mesh(
 		new THREE.BoxGeometry(0.012, 0.013, 0.04),
@@ -240,6 +244,13 @@ function create_house() {
 	);
 	block3.position.y = 0.083;
 	block3.rotation.y = -0.1 * PI;
+
+	const block4 = new THREE.Mesh(
+		new THREE.BoxGeometry(0.01, 0.01, 0.02),
+		woodMaterial,
+	);
+	block4.position.y = 0.077;
+	block4.rotation.y = -0.1 * PI;
 
 	const triangleGeometry = new THREE.BufferGeometry().setFromPoints([
 		new THREE.Vector3(0.0, 0.01, 0.0),
@@ -282,15 +293,13 @@ function create_house() {
 	block3.receiveShadow = true;
 	block3.castShadow = true;
 	triangleFront.receiveShadow = true;
-	triangleFront.castShadow = true;
 	triangleBack.receiveShadow = true;
-	triangleBack.castShadow = true;
 	roofLeft.receiveShadow = true;
 	roofLeft.castShadow = true;
 	roofRight.receiveShadow = true;
 	roofRight.castShadow = true;
 
-	return [block, block2, block3, triangleFront, triangleBack, roofLeft, roofRight];
+	return [block, block2, block3, block4, triangleFront, triangleBack, roofLeft, roofRight];
 }
 
 function createTrees(tree) {
