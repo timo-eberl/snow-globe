@@ -13,6 +13,10 @@ const nearClippingPlane = 0.01;
 const farClippingPlane = 100;
 
 const scene = new THREE.Scene();
+// fog does not act as normal fog, instead it is abused to create an effect when entering the globe
+// inverse-fog -> the closer you are to the glass globe, the stronger the effect
+scene.fog = new THREE.Fog( 0xcccccc, 0.05, 0.0 );
+scene.fog.color.set(0xccccff);
 const camera = new THREE.PerspectiveCamera(fov, 2, nearClippingPlane, farClippingPlane);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.shadowMap.enabled = true;
@@ -29,18 +33,19 @@ const objLoader = new OBJLoader();
 objLoader.load("resources/tree_optimized_2.obj", onTreeMeshLoaded);
 
 // materials that will be reused
-const snowMaterial = new THREE.MeshStandardMaterial( { color: 0xccccff } );
-const darkerSnowMaterial = new THREE.MeshStandardMaterial( { color: 0xbbbbee } );
+const snowMaterial = new THREE.MeshStandardMaterial( { color: 0xccccff, fog: false } );
+const darkerSnowMaterial = new THREE.MeshStandardMaterial( { color: 0xbbbbee, fog: false } );
 
 // add lights
 scene.add(...createLights());
 
 // add objects
-const sphere = create_sphere();
-scene.add(sphere);
+const spheres = create_sphere();
+const sphere = spheres[0];
+scene.add(...spheres);
 scene.add(...create_table());
 scene.add(...create_stand());
-scene.add(create_snow());
+scene.add(...create_snow());
 scene.add(...create_house());
 
 // after we added our objects, we need to update the shadow map
@@ -183,7 +188,7 @@ function createLights() {
 
 function create_table() {
 	const geometry = new THREE.PlaneGeometry(1, 1);
-	const material = new THREE.MeshStandardMaterial( { color: 0x421b13, roughness: 0.7 } );
+	const material = new THREE.MeshStandardMaterial({ color: 0x421b13, roughness: 0.7, fog: false });
 
 	const up = new THREE.Mesh(geometry, material);
 	up.rotation.x = PI * -0.5;
@@ -201,7 +206,7 @@ function create_table() {
 }
 
 function create_sphere() {
-	const mesh = new THREE.Mesh(
+	const outside = new THREE.Mesh(
 		new THREE.SphereGeometry(0.1, 40, 10),
 		new THREE.MeshPhysicalMaterial({
 			roughness: 0,
@@ -209,9 +214,21 @@ function create_sphere() {
 			ior: 1,
 		}),
 	);
-	mesh.position.y = 0.11;
+	outside.position.y = 0.11;
 
-	return mesh;
+	const inside = new THREE.Mesh(
+		new THREE.SphereGeometry(0.1, 20, 8),
+		new THREE.MeshBasicMaterial({
+			color: 0x000000,
+			transparent: true,
+			opacity: 0.3,
+			side: THREE.BackSide,
+			fog: false,
+		}),
+	);
+	inside.position.y = 0.11;
+
+	return [outside, inside];
 }
 
 function create_stand() {
@@ -220,12 +237,12 @@ function create_stand() {
 
 	const wood = new THREE.Mesh(
 		new THREE.CylinderGeometry(0.07, 0.08, 0.035, 20),
-		new THREE.MeshStandardMaterial( { color: 0x311815, roughness: 0.4 } ),
+		new THREE.MeshStandardMaterial( { color: 0x311815, roughness: 0.4, fog: false } ),
 	);
 	wood.position.y = height * 0.5;
 
 	const ringMaterial = new THREE.MeshStandardMaterial({
-		color: 0xe8b873, metalness: 1, roughness: 0.6
+		color: 0xe8b873, metalness: 1, roughness: 0.6, fog: false
 	});
 	const upperRing = new THREE.Mesh(
 		new THREE.TorusGeometry(0.07, ringWidth, 4, 30),
@@ -261,11 +278,11 @@ function create_snow() {
 	mesh.receiveShadow = true;
 	mesh.castShadow = true;
 
-	return mesh;
+	return [mesh];
 }
 
 function create_house() {
-	const woodMaterial = new THREE.MeshStandardMaterial( {color: 0x553322 } );
+	const woodMaterial = new THREE.MeshStandardMaterial( { color: 0x553322, fog: false } );
 
 	const block = new THREE.Mesh(
 		new THREE.BoxGeometry(0.012, 0.013, 0.04),

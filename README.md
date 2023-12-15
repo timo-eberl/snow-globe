@@ -12,7 +12,7 @@ A snow globe made with three.js for the lecture "113447a Computer Graphics".
 - [x] Light -> directional lights, spot light inside house
 - [x] Camera
 - [x] Shadows
-- [ ] Fog
+- [x] Fog -> used in a hacky way to create an effect when entering the globe
 - [ ] Simple animation
 - [ ] Shader
 
