@@ -4,44 +4,38 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 
 const PI = 3.141
 
+// resolution is dynamically adjusted depending on the performance
+let resolutionScale = 1;
+const resolutionScaleTarget = 1;
+
 const fov = 70;
 const nearClippingPlane = 0.01;
 const farClippingPlane = 100;
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(
-	fov, window.innerWidth / window.innerHeight, nearClippingPlane, farClippingPlane);
+const camera = new THREE.PerspectiveCamera(fov, 2, nearClippingPlane, farClippingPlane);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
-// update the shadow map only one time
 renderer.shadowMap.autoUpdate = false;
 document.body.appendChild(renderer.domElement);
 
-window.addEventListener("resize", resize);
+onWindowResize();
+window.addEventListener("resize", onWindowResize);
 
 const textureLoader = new THREE.TextureLoader();
-textureLoader.load("resources/fireplace_2k.jpg", (hdriTexture) => {
-	hdriTexture.colorSpace = THREE.SRGBColorSpace;
-	hdriTexture.mapping = THREE.EquirectangularReflectionMapping;
-	scene.background = hdriTexture;
-	scene.environment = hdriTexture;
-	scene.backgroundBlurriness = 0.5;
-	scene.backgroundIntensity = 0.5;
-});
+textureLoader.load("resources/fireplace_2k.jpg", onHdriLoaded);
+
+const objLoader = new OBJLoader();
+objLoader.load("resources/tree_optimized_2.obj", onTreeMeshLoaded);
 
 // materials that will be reused
 const snowMaterial = new THREE.MeshStandardMaterial( { color: 0xccccff } );
 const darkerSnowMaterial = new THREE.MeshStandardMaterial( { color: 0xbbbbee } );
 
+// add lights
 scene.add(...createLights());
 
-// create objects
-const objLoader = new OBJLoader();
-objLoader.load("resources/tree_optimized_2.obj", (mesh) => {
-	scene.add(...createTrees(mesh));
-	renderer.shadowMap.needsUpdate = true;
-});
+// add objects
 const sphere = create_sphere();
 scene.add(sphere);
 scene.add(...create_table());
@@ -49,6 +43,7 @@ scene.add(...create_stand());
 scene.add(create_snow());
 scene.add(...create_house());
 
+// after we added our objects, we need to update the shadow map
 renderer.shadowMap.needsUpdate = true;
 
 camera.position.z = 0.14;
@@ -63,9 +58,16 @@ cameraControls.autoRotateSpeed = 0;
 cameraControls.target.copy(sphere.position);
 
 let lastTime = 0;
+// used for dynamic resolution
+let stepsCurrInterval = 0;
+let goodRenderTimeCounter = 0;
+const interval = 200;
+
 function render(time) {
 	time *= 0.001; // convert to seconds
+
 	let delta = time - lastTime;
+	updateDynamicResolution(delta);
 	lastTime = time;
 
 	cameraControls.update();
@@ -82,10 +84,53 @@ function render(time) {
 
 requestAnimationFrame(render);
 
-function resize() {
-	renderer.setSize(window.innerWidth, window.innerHeight);
+function updateRenderResolution() {
+	renderer.setSize(
+		window.innerWidth * resolutionScale, window.innerHeight * resolutionScale, false
+	);
+}
+
+function onWindowResize() {
+	updateRenderResolution();
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
+}
+
+function updateDynamicResolution(delta) {
+	if (stepsCurrInterval >= interval) {
+		if (goodRenderTimeCounter >= interval && resolutionScale < resolutionScaleTarget) {
+			// performance is stable -> steadily increase resolution
+			resolutionScale *= 1.05;
+			resolutionScale = Math.min(resolutionScaleTarget, resolutionScale);
+			updateRenderResolution();
+		}
+		stepsCurrInterval = 0;
+		goodRenderTimeCounter = 0;
+	}
+	if (delta > 1.0/30) {
+		// performance is bad -> instantly lower resolution
+		resolutionScale *= 0.95;
+		resolutionScale = Math.max(0.2, resolutionScale);
+		updateRenderResolution();
+	}
+	else if (delta < 1.0/55) {
+		goodRenderTimeCounter++;
+	}
+	stepsCurrInterval++;
+}
+
+function onHdriLoaded(hdriTexture) {
+	hdriTexture.colorSpace = THREE.SRGBColorSpace;
+	hdriTexture.mapping = THREE.EquirectangularReflectionMapping;
+	scene.background = hdriTexture;
+	scene.environment = hdriTexture;
+	scene.backgroundBlurriness = 0.5;
+	scene.backgroundIntensity = 0.5;
+}
+
+function onTreeMeshLoaded(mesh) {
+	scene.add(...createTrees(mesh));
+	renderer.shadowMap.needsUpdate = true;
 }
 
 function createLights() {
