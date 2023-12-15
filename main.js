@@ -16,7 +16,7 @@ const scene = new THREE.Scene();
 // fog does not act as normal fog, instead it is abused to create an effect when entering the globe
 // inverse-fog -> the closer you are to the glass globe, the stronger the effect
 scene.fog = new THREE.Fog( 0xcccccc, 0.05, 0.0 );
-scene.fog.color.set(0xccccff);
+scene.fog.color.set(0xaaaabb);
 const camera = new THREE.PerspectiveCamera(fov, 2, nearClippingPlane, farClippingPlane);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.shadowMap.enabled = true;
@@ -37,7 +37,9 @@ const snowMaterial = new THREE.MeshStandardMaterial( { color: 0xccccff, fog: fal
 const darkerSnowMaterial = new THREE.MeshStandardMaterial( { color: 0xbbbbee, fog: false } );
 
 // add lights
-scene.add(...createLights());
+const lights = createLights();
+const houseSpotLight = lights[0];
+scene.add(...lights);
 
 // add objects
 const spheres = create_sphere();
@@ -47,6 +49,9 @@ scene.add(...create_table());
 scene.add(...create_stand());
 scene.add(...create_snow());
 scene.add(...create_house());
+
+const particles = createParticles();
+scene.add(...particles);
 
 // after we added our objects, we need to update the shadow map
 renderer.shadowMap.needsUpdate = true;
@@ -66,7 +71,7 @@ let lastTime = 0;
 // used for dynamic resolution
 let stepsCurrInterval = 0;
 let goodRenderTimeCounter = 0;
-const interval = 200;
+const interval = 100;
 
 function render(time) {
 	time *= 0.001; // convert to seconds
@@ -81,6 +86,23 @@ function render(time) {
 	// this way we can save geometry at the side we are looking at without it being obvious
 	sphere.lookAt(camera.position);
 	sphere.rotateX(0.5 * PI);
+
+	// animate house light
+	const flickerValue =
+		(Math.cos(time * 1 * PI) + 2) * 0.1
+		+ (Math.cos(time * 2 * PI) + 1) * 0.15
+		+ (Math.cos((time + 23.4536) * 2.5 * PI) + 1) * 0.15;
+	houseSpotLight.intensity = 0.2 * flickerValue;
+
+	particles[0].rotation.x = (time/9) % (2*PI);
+	particles[0].rotation.y = (time/5) % (2*PI);
+	particles[0].rotation.z = (time/10) % (2*PI);
+	particles[1].rotation.x = (-time/4) % (2*PI);
+	particles[1].rotation.y = (-time/2) % (2*PI);
+	particles[1].rotation.z = (-time/4) % (2*PI);
+	particles[2].rotation.x = (-time/6) % (2*PI);
+	particles[2].rotation.y = (time/4) % (2*PI);
+	particles[2].rotation.z = (time/7) % (2*PI);
 
 	renderer.render(scene, camera);
 
@@ -142,7 +164,7 @@ function createLights() {
 	const shadowMapSize = 1024;
 
 	const directionalLight = new THREE.DirectionalLight(0xffffff,3);
-	directionalLight.position.set(0.5, 0.4, 0.1);
+	directionalLight.position.set(2, 1.6, 0.4);
 	directionalLight.castShadow = true;
 	directionalLight.shadow.camera.near = nearClippingPlane;
 	directionalLight.shadow.camera.far = farClippingPlane;
@@ -154,7 +176,7 @@ function createLights() {
 	directionalLight.shadow.mapSize = new THREE.Vector2(shadowMapSize, shadowMapSize);
 
 	const directionalLight2 = new THREE.DirectionalLight(0xffffff,1);
-	directionalLight2.position.set(-1, 4, -1);
+	directionalLight2.position.set(-0.5, 2, -0.5);
 	directionalLight2.castShadow = true;
 	directionalLight2.shadow.camera.near = nearClippingPlane;
 	directionalLight2.shadow.camera.far = farClippingPlane;
@@ -181,8 +203,8 @@ function createLights() {
 	const hemisphereLight = new THREE.HemisphereLight(0xffffbb, 0x080820, 1);
 
 	return [
-		directionalLight, directionalLight2, hemisphereLight, houseLight,
-		houseSpotLight, houseSpotLight.target
+		houseSpotLight, houseSpotLight.target, directionalLight, directionalLight2, hemisphereLight,
+		houseLight
 	];
 }
 
@@ -209,6 +231,7 @@ function create_sphere() {
 	const outside = new THREE.Mesh(
 		new THREE.SphereGeometry(0.1, 40, 10),
 		new THREE.MeshPhysicalMaterial({
+			color: 0xcccccc,
 			roughness: 0,
 			transmission: 1,
 			ior: 1,
@@ -217,7 +240,7 @@ function create_sphere() {
 	outside.position.y = 0.11;
 
 	const inside = new THREE.Mesh(
-		new THREE.SphereGeometry(0.1, 20, 8),
+		new THREE.SphereGeometry(0.09, 20, 8),
 		new THREE.MeshBasicMaterial({
 			color: 0x000000,
 			transparent: true,
@@ -270,7 +293,7 @@ function create_stand() {
 
 function create_snow() {
 	const mesh = new THREE.Mesh(
-		new THREE.CylinderGeometry(0.09, 0.068, 0.035, 30),
+		new THREE.CylinderGeometry(0.09, 0.067, 0.035, 30),
 		darkerSnowMaterial,
 	);
 	mesh.position.y = 0.055;
@@ -437,3 +460,38 @@ function createTrees(tree) {
 		firstTree, secondTree, thirdTree, fourthTree, fifthTree, sixthTree, seventhTree, eigthTree
 	];
 };
+
+function createParticles() {
+	const particlesArray = [];
+
+	for (let i = 0; i < 3; i++) {
+		const positions = generatePositionsInCircle(300, 0.09);
+	
+		const geometry = new THREE.BufferGeometry();
+		geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+	
+		const material = new THREE.PointsMaterial({ size: 0.0015 });
+	
+		const particles = new THREE.Points(geometry, material);
+		particles.position.copy(sphere.position);
+
+		particlesArray.push(particles)
+	}
+
+	return particlesArray;
+}
+
+function generatePositionsInCircle(n, radius) {
+	const positions = [];
+	for (let i = 0; i < n; i++) {
+		let x,y,z,d;
+		do {
+			x = Math.random() * 2.0 - 1.0;
+			y = Math.random() * 2.0 - 1.0;
+			z = Math.random() * 2.0 - 1.0;
+			d = x*x + y*y + z*z;
+		} while(d > 1.0);
+		positions.push(x*radius,y*radius,z*radius);
+	}
+	return positions;
+}
