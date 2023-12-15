@@ -14,6 +14,7 @@ const camera = new THREE.PerspectiveCamera(
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
 scene.add(...createLights());
@@ -96,10 +97,21 @@ function createLights() {
 	directionalLight2.shadow.camera.top = 0.2;
 	directionalLight2.shadow.camera.bottom = -0.2;
 	directionalLight2.shadow.mapSize = new THREE.Vector2(1024, 1024);
+
+	const houseLight = new THREE.PointLight(0xff00ff, 0.5, 0.5);
+	houseLight.position.set(0,0.08,0);
+	houseLight.shadow.castShadow = true;
+	houseLight.shadow.camera.near = 0.01;
+	houseLight.shadow.camera.far = 0.1;
+	houseLight.shadow.mapSize = new THREE.Vector2(2048, 2048);
+	const helper = new THREE.CameraHelper(houseLight.shadow.camera);
+	
+	scene.add(helper);
 	
 	const hemisphereLight = new THREE.HemisphereLight(0xffffbb, 0x080820, 4);
 
-	return [directionalLight, directionalLight2, hemisphereLight];
+	return [houseLight];
+	return [directionalLight, directionalLight2, hemisphereLight, houseLight];
 }
 
 function create_table() {
@@ -191,11 +203,29 @@ function create_house() {
 	const woodMaterial = new THREE.MeshStandardMaterial( {color: 0x221816 } );
 
 	const block = new THREE.Mesh(
-		new THREE.BoxGeometry(0.03, 0.013, 0.04),
+		new THREE.BoxGeometry(0.012, 0.013, 0.04),
 		woodMaterial,
 	);
 	block.position.y = 0.078;
+	block.position.x = -0.009;
+	block.position.z = -0.003;
 	block.rotation.y = -0.1 * PI;
+
+	const block2 = new THREE.Mesh(
+		new THREE.BoxGeometry(0.012, 0.013, 0.04),
+		woodMaterial,
+	);
+	block2.position.y = 0.078;
+	block2.position.x = 0.009;
+	block2.position.z = 0.003;
+	block2.rotation.y = -0.1 * PI;
+
+	const block3 = new THREE.Mesh(
+		new THREE.BoxGeometry(0.03, 0.005, 0.04),
+		woodMaterial,
+	);
+	block3.position.y = 0.083;
+	block3.rotation.y = -0.1 * PI;
 
 	const triangleGeometry = new THREE.BufferGeometry().setFromPoints([
 		new THREE.Vector3(0.0, 0.01, 0.0),
@@ -233,6 +263,10 @@ function create_house() {
 
 	block.receiveShadow = true;
 	block.castShadow = true;
+	block2.receiveShadow = true;
+	block2.castShadow = true;
+	block3.receiveShadow = true;
+	block3.castShadow = true;
 	triangleFront.receiveShadow = true;
 	triangleFront.castShadow = true;
 	triangleBack.receiveShadow = true;
@@ -242,7 +276,7 @@ function create_house() {
 	roofRight.receiveShadow = true;
 	roofRight.castShadow = true;
 
-	return [block, triangleFront, triangleBack, roofLeft, roofRight];
+	return [block, block2, block3, triangleFront, triangleBack, roofLeft, roofRight];
 }
 
 function createTrees(tree) {
@@ -256,8 +290,6 @@ function createTrees(tree) {
 	firstTree.position.y = 0.075;
 	firstTree.position.x = -0.02;
 	firstTree.position.z = -0.02;
-
-	console.log(tree);
 
 	const secondTree = tree.clone();
 	scale = 0.02;
