@@ -29,7 +29,7 @@ window.addEventListener("resize", onWindowResize);
 
 const textureLoader = new THREE.TextureLoader();
 textureLoader.load("resources/fireplace_2k.jpg", onHdriLoaded);
-textureLoader.load("resources/voronoi_8.png", onSpokesLoaded);
+textureLoader.load("resources/voronoi_8.png", onVoronoiLoaded);
 
 const objLoader = new OBJLoader();
 objLoader.load("resources/tree.obj", onTreeMeshLoaded);
@@ -159,7 +159,7 @@ function onHdriLoaded(hdriTexture) {
 	scene.backgroundIntensity = 0.5;
 }
 
-function onSpokesLoaded(texture) {
+function onVoronoiLoaded(texture) {
 	texture.minFilter = THREE.LinearFilter;
 	texture.magFilter = THREE.LinearFilter;
 	texture.colorSpace = THREE.SRGBColorSpace;
@@ -245,13 +245,14 @@ function createSphere() {
 			color: 0xcccccc,
 			roughness: 0,
 			transmission: 1,
-			ior: 1,
+			ior: 2.33,
+			thickness: 0.017,
 		}),
 	);
 	outside.position.y = 0.11;
 
 	const inside = new THREE.Mesh(
-		new THREE.SphereGeometry(0.09, 20, 8),
+		new THREE.SphereGeometry(0.099, 20, 8),
 		new THREE.MeshBasicMaterial({
 			color: 0x000000,
 			transparent: true,
@@ -306,7 +307,7 @@ function createStand() {
 
 function createSnow() {
 	const mesh = new THREE.Mesh(
-		new THREE.CylinderGeometry(0.09, 0.067, 0.035, 30),
+		new THREE.CylinderGeometry(0.09-0.007, 0.067, 0.035, 30),
 		darkerSnowMaterial,
 	);
 	mesh.position.y = 0.055;
