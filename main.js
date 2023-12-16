@@ -20,6 +20,7 @@ scene.fog.color.set(0xaaaabb);
 const camera = new THREE.PerspectiveCamera(fov, 2, nearClippingPlane, farClippingPlane);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.shadowMap.autoUpdate = false;
 document.body.appendChild(renderer.domElement);
 
@@ -28,6 +29,7 @@ window.addEventListener("resize", onWindowResize);
 
 const textureLoader = new THREE.TextureLoader();
 textureLoader.load("resources/fireplace_2k.jpg", onHdriLoaded);
+textureLoader.load("resources/voronoi_8.png", onSpokesLoaded);
 
 const objLoader = new OBJLoader();
 objLoader.load("resources/tree.obj", onTreeMeshLoaded);
@@ -73,7 +75,7 @@ let lastTime = 0;
 // used for dynamic resolution
 let stepsCurrInterval = 0;
 let goodRenderTimeCounter = 0;
-const interval = 100;
+const interval = 200;
 
 function render(time) {
 	time *= 0.001; // convert to seconds
@@ -94,7 +96,7 @@ function render(time) {
 		(Math.cos(time * 1 * PI) + 2) * 0.1
 		+ (Math.cos(time * 2 * PI) + 1) * 0.15
 		+ (Math.cos((time + 23.4536) * 2.5 * PI) + 1) * 0.15;
-	houseSpotLight.intensity = 0.2 * flickerValue;
+	houseSpotLight.intensity = 0.6 * flickerValue;
 
 	particles[0].rotation.x = (time/9) % (2*PI);
 	particles[0].rotation.y = (time/5) % (2*PI);
@@ -138,7 +140,7 @@ function updateDynamicResolution(delta) {
 	}
 	if (delta > 1.0/30) {
 		// performance is bad -> instantly lower resolution
-		resolutionScale *= 0.95;
+		resolutionScale *= 0.9;
 		resolutionScale = Math.max(0.2, resolutionScale);
 		updateRenderResolution();
 	}
@@ -155,6 +157,13 @@ function onHdriLoaded(hdriTexture) {
 	scene.environment = hdriTexture;
 	scene.backgroundBlurriness = 0.5;
 	scene.backgroundIntensity = 0.5;
+}
+
+function onSpokesLoaded(texture) {
+	texture.minFilter = THREE.LinearFilter;
+	texture.magFilter = THREE.LinearFilter;
+	texture.colorSpace = THREE.SRGBColorSpace;
+	houseSpotLight.map = texture;
 }
 
 function onTreeMeshLoaded(mesh) {

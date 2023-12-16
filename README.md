@@ -8,7 +8,7 @@ A snow globe made with three.js for the lecture "113447a Computer Graphics".
 - [x] Orbit Controls -> Camera orbits around a point inside the globe
 - [x] Import at least one 3D model -> tree
 - [x] Materials
-- [x] Texture -> HDRI Map for reflections
+- [x] Texture -> HDRI Map for reflections, spot light noise map
 - [x] Light -> directional lights, spot light inside house
 - [x] Camera
 - [x] Shadows
