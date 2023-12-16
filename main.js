@@ -49,6 +49,7 @@ scene.add(...createTable());
 scene.add(...createStand());
 scene.add(...createSnow());
 scene.add(...createHouse());
+scene.add(...createSnowman());
 
 const particles = createParticles();
 scene.add(...particles);
@@ -56,8 +57,8 @@ scene.add(...particles);
 // after we added our objects, we need to update the shadow map
 renderer.shadowMap.needsUpdate = true;
 
-camera.position.z = 0.14;
-camera.position.y = 0.13;
+camera.position.z = 0.25;
+camera.position.y = 0.18;
 const cameraControls = new OrbitControls(camera, renderer.domElement);
 // limit the angles, because on when looking from low or high angles somehow the performance
 // completely breaks down
@@ -66,6 +67,7 @@ cameraControls.maxPolarAngle = PI * 0.6;
 cameraControls.autoRotate = true;
 cameraControls.autoRotateSpeed = 0;
 cameraControls.target.copy(sphere.position);
+cameraControls.target.y -= 0.025;
 
 let lastTime = 0;
 // used for dynamic resolution
@@ -97,9 +99,9 @@ function render(time) {
 	particles[0].rotation.x = (time/9) % (2*PI);
 	particles[0].rotation.y = (time/5) % (2*PI);
 	particles[0].rotation.z = (time/10) % (2*PI);
-	particles[1].rotation.x = (-time/4) % (2*PI);
-	particles[1].rotation.y = (-time/2) % (2*PI);
-	particles[1].rotation.z = (-time/4) % (2*PI);
+	particles[1].rotation.x = (-time/6) % (2*PI);
+	particles[1].rotation.y = (-time/3) % (2*PI);
+	particles[1].rotation.z = (-time/6) % (2*PI);
 	particles[2].rotation.x = (-time/6) % (2*PI);
 	particles[2].rotation.y = (time/4) % (2*PI);
 	particles[2].rotation.z = (time/7) % (2*PI);
@@ -163,31 +165,31 @@ function onTreeMeshLoaded(mesh) {
 function createLights() {
 	const shadowMapSize = 1024;
 
-	const directionalLight = new THREE.DirectionalLight(0xffffff,3);
-	directionalLight.position.set(2, 1.6, 0.4);
+	const directionalLight = new THREE.DirectionalLight(0xffffff,1);
+	directionalLight.position.set(1.8, 1.6, 0.4);
 	directionalLight.castShadow = true;
 	directionalLight.shadow.camera.near = nearClippingPlane;
 	directionalLight.shadow.camera.far = farClippingPlane;
 	// by default the camera bounds are big and we get a blurry shadow -> make them smaller
-	directionalLight.shadow.camera.left = -0.2;
-	directionalLight.shadow.camera.right = 0.2;
-	directionalLight.shadow.camera.top = 0.2;
-	directionalLight.shadow.camera.bottom = -0.2;
+	directionalLight.shadow.camera.left = -0.185;
+	directionalLight.shadow.camera.right = 0.185;
+	directionalLight.shadow.camera.top = 0.185;
+	directionalLight.shadow.camera.bottom = -0.185;
 	directionalLight.shadow.mapSize = new THREE.Vector2(shadowMapSize, shadowMapSize);
 
-	const directionalLight2 = new THREE.DirectionalLight(0xffffff,1);
-	directionalLight2.position.set(-0.5, 2, -0.5);
+	const directionalLight2 = new THREE.DirectionalLight(0xffffff,0.5);
+	directionalLight2.position.set(-0.3, 2, -0.8);
 	directionalLight2.castShadow = true;
 	directionalLight2.shadow.camera.near = nearClippingPlane;
 	directionalLight2.shadow.camera.far = farClippingPlane;
 	// by default the camera bounds are big and we get a blurry shadow -> make them smaller
-	directionalLight2.shadow.camera.left = -0.2;
-	directionalLight2.shadow.camera.right = 0.2;
-	directionalLight2.shadow.camera.top = 0.2;
-	directionalLight2.shadow.camera.bottom = -0.2;
+	directionalLight2.shadow.camera.left = -0.17;
+	directionalLight2.shadow.camera.right = 0.17;
+	directionalLight2.shadow.camera.top = 0.17;
+	directionalLight2.shadow.camera.bottom = -0.17;
 	directionalLight2.shadow.mapSize = new THREE.Vector2(shadowMapSize, shadowMapSize);
 
-	const houseSpotLight = new THREE.SpotLight(0xff5500, 0.2, 0.07);
+	const houseSpotLight = new THREE.SpotLight(0xff9900, 0.2, 0.07);
 	houseSpotLight.position.set(-0.0025,0.08,0.008);
 	houseSpotLight.angle = 0.2 * PI;
 	houseSpotLight.castShadow = true;
@@ -250,6 +252,8 @@ function createSphere() {
 		}),
 	);
 	inside.position.y = 0.11;
+
+	outside.castShadow = true;
 
 	return [outside, inside];
 }
@@ -389,6 +393,50 @@ function createHouse() {
 	return [block, block2, block3, block4, triangleFront, triangleBack, roofLeft, roofRight];
 }
 
+function createSnowman() {
+	const geometry = new THREE.SphereGeometry(1, 8, 6);
+
+	const ballBottom = new THREE.Mesh(geometry, snowMaterial);
+	ballBottom.position.set(-0.02, 0.08-0.006, 0.05);
+	ballBottom.scale.set(0.0035, 0.0025, 0.0035);
+
+	const ballMiddle = new THREE.Mesh(geometry, snowMaterial);
+	ballMiddle.position.set(-0.02, 0.0828-0.006, 0.05);
+	ballMiddle.scale.set(0.0025, 0.002, 0.0025);
+
+	const head = new THREE.Mesh(geometry, snowMaterial);
+	head.position.set(-0.02, 0.086-0.006, 0.05);
+	head.scale.set(0.002, 0.0018, 0.002);
+
+	const hat = new THREE.Mesh(
+		new THREE.CylinderGeometry(0.0018, 0.0015, 0.0025, 8),
+		new THREE.MeshStandardMaterial({
+			color: 0x111111,
+			fog: false,
+		}),
+	);
+	hat.position.set(-0.0193, 0.088-0.006, 0.0495);
+	hat.rotation.z = -0.1 * PI;
+	hat.rotation.x = -0.1 * PI;
+
+	const nose = new THREE.Mesh(
+		new THREE.ConeGeometry(0.0004, 0.002, 5),
+		new THREE.MeshStandardMaterial({
+			color: 0xffaa33,
+			fog: false,
+		}),
+	);
+	nose.position.set(-0.02, 0.086-0.006, 0.053);
+	nose.rotation.x = 0.5 * PI;
+
+	ballBottom.castShadow = true;
+	ballMiddle.castShadow = true;
+	head.castShadow = true;
+	hat.castShadow = true;
+
+	return [ballBottom, ballMiddle, head, hat, nose];
+}
+
 function createTrees(tree) {
 
 	tree = tree.children[0];
@@ -465,7 +513,7 @@ function createParticles() {
 	const particlesArray = [];
 
 	for (let i = 0; i < 3; i++) {
-		const positions = generatePositionsInCircle(300, 0.09);
+		const positions = generatePositionsInCircle(600 + i * 100, 0.09);
 	
 		const geometry = new THREE.BufferGeometry();
 		geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
