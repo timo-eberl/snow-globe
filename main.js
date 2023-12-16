@@ -30,7 +30,7 @@ const textureLoader = new THREE.TextureLoader();
 textureLoader.load("resources/fireplace_2k.jpg", onHdriLoaded);
 
 const objLoader = new OBJLoader();
-objLoader.load("resources/tree_optimized_2.obj", onTreeMeshLoaded);
+objLoader.load("resources/tree.obj", onTreeMeshLoaded);
 
 // materials that will be reused
 const snowMaterial = new THREE.MeshStandardMaterial( { color: 0xccccff, fog: false } );
