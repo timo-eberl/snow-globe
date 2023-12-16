@@ -7,6 +7,7 @@ const PI = 3.141
 // resolution is dynamically adjusted depending on the performance
 let resolutionScale = 1;
 const resolutionScaleTarget = 1;
+const dynamicUpscalingInterval = 150;
 
 const fov = 70;
 const nearClippingPlane = 0.01;
@@ -24,8 +25,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.shadowMap.autoUpdate = false;
 document.body.appendChild(renderer.domElement);
 
-onWindowResize();
-window.addEventListener("resize", onWindowResize);
+window.addEventListener("resize", updateWindowSize);
 
 const textureLoader = new THREE.TextureLoader();
 textureLoader.load("resources/fireplace_2k.jpg", onHdriLoaded);
@@ -56,6 +56,14 @@ scene.add(...createSnowman());
 const particles = createParticles();
 scene.add(...particles);
 
+// set up post processing
+renderer.autoClear = false;
+const ppCamera = new THREE.PerspectiveCamera(fov, 2, nearClippingPlane, farClippingPlane);
+const ppCameraHelper = new THREE.CameraHelper(ppCamera);
+const ppQuad = createImageEffectQuad();
+const ppScene = new THREE.Scene();
+ppScene.add(ppQuad);
+
 // after we added our objects, we need to update the shadow map
 renderer.shadowMap.needsUpdate = true;
 
@@ -71,11 +79,13 @@ cameraControls.autoRotateSpeed = 0;
 cameraControls.target.copy(sphere.position);
 cameraControls.target.y -= 0.025;
 
+// before we begin rendering, update the window size one time
+updateWindowSize();
+
 let lastTime = 0;
 // used for dynamic resolution
 let stepsCurrInterval = 0;
 let goodRenderTimeCounter = 0;
-const interval = 200;
 
 function render(time) {
 	time *= 0.001; // convert to seconds
@@ -85,6 +95,8 @@ function render(time) {
 	lastTime = time;
 
 	cameraControls.update();
+
+	updateImageEffectQuad();
 
 	// rotate the glass sphere in a way that the same side faces towards the camera
 	// this way we can save geometry at the side we are looking at without it being obvious
@@ -108,7 +120,11 @@ function render(time) {
 	particles[2].rotation.y = (time/4) % (2*PI);
 	particles[2].rotation.z = (time/7) % (2*PI);
 
+	// first render the scene, then render post processing "on top"
+	renderer.clear();
 	renderer.render(scene, camera);
+	renderer.clearDepth();
+	renderer.render(ppScene, ppCamera);
 
 	requestAnimationFrame(render);
 }
@@ -121,17 +137,20 @@ function updateRenderResolution() {
 	);
 }
 
-function onWindowResize() {
+function updateWindowSize() {
 	updateRenderResolution();
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
+	ppCamera.aspect = camera.aspect;
+	ppCamera.updateProjectionMatrix();
+	ppCameraHelper.update();
 }
 
 function updateDynamicResolution(delta) {
-	if (stepsCurrInterval >= interval) {
-		if (goodRenderTimeCounter >= interval && resolutionScale < resolutionScaleTarget) {
+	if (stepsCurrInterval >= dynamicUpscalingInterval) {
+		if (goodRenderTimeCounter >= dynamicUpscalingInterval && resolutionScale < resolutionScaleTarget) {
 			// performance is stable -> steadily increase resolution
-			resolutionScale *= 1.05;
+			resolutionScale += 0.05;
 			resolutionScale = Math.min(resolutionScaleTarget, resolutionScale);
 			updateRenderResolution();
 		}
@@ -552,4 +571,63 @@ function generatePositionsInCircle(n, radius) {
 		positions.push(x*radius,y*radius,z*radius);
 	}
 	return positions;
+}
+
+function createImageEffectQuad() {
+	const vertices = new Float32Array([
+		0.0, 0.0,  0.0,
+		0.0, 0.0,  0.0,
+		0.0, 0.0,  0.0,
+		0.0, 0.0,  0.0,
+		0.0, 0.0,  0.0,
+		0.0, 0.0,  0.0,
+	]);
+
+	const geometry = new THREE.BufferGeometry();
+	geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+
+	const mesh = new THREE.Mesh(
+		geometry,
+		new THREE.MeshBasicMaterial({ color: 0x0000ff, transparent: true, opacity: 0.1 }),
+	);
+
+	return mesh;
+}
+
+function updateImageEffectQuad() {
+	// corners of the near clipping plane which we get from the camera helper
+	const n = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+
+	const quadPosAttribute = ppQuad.geometry.getAttribute("position");
+	const cameraPosAttribute = ppCameraHelper.geometry.getAttribute("position");
+	const cameraPosAttributeNames = [ "n1", "n2", "n3", "n4" ];
+
+	for (let i = 0; i < 4; i++) {
+		const attributeIndex = ppCameraHelper.pointMap[cameraPosAttributeNames[i]][0];
+		n[i].set(
+			cameraPosAttribute.getX(attributeIndex),
+			cameraPosAttribute.getY(attributeIndex),
+			cameraPosAttribute.getZ(attributeIndex),
+		);
+
+		// move the points away from the camera center to avoid clipping
+		const vectorFromCenter =
+			new THREE.Vector3 (0,0,0) // camera center
+			.sub(n[i]) // subtract current near clipping plane point to get a vector from the center
+			.multiplyScalar(nearClippingPlane * -0.01); // scale
+		n[i].add(vectorFromCenter);
+
+		// convert to world space
+		n[i].applyMatrix4(ppCamera.matrixWorld);
+	}
+	// lower left triangle
+	quadPosAttribute.setXYZ(0, n[0].x, n[0].y, n[0].z);
+	quadPosAttribute.setXYZ(1, n[1].x, n[1].y, n[1].z);
+	quadPosAttribute.setXYZ(2, n[2].x, n[2].y, n[2].z);
+	// upper right triangle
+	quadPosAttribute.setXYZ(3, n[2].x, n[2].y, n[2].z);
+	quadPosAttribute.setXYZ(4, n[1].x, n[1].y, n[1].z);
+	quadPosAttribute.setXYZ(5, n[3].x, n[3].y, n[3].z);
+
+	quadPosAttribute.needsUpdate = true;
 }
