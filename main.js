@@ -16,8 +16,7 @@ const farClippingPlane = 100;
 const scene = new THREE.Scene();
 // fog does not act as normal fog, instead it is abused to create an effect when entering the globe
 // inverse-fog -> the closer you are to the glass globe, the stronger the effect
-scene.fog = new THREE.Fog( 0xcccccc, 0.05, 0.0 );
-scene.fog.color.set(0xaaaabb);
+scene.fog = new THREE.Fog( 0xaaaabb, 0.05, 0.0 );
 const camera = new THREE.PerspectiveCamera(fov, 2, nearClippingPlane, farClippingPlane);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.shadowMap.enabled = true;
@@ -30,6 +29,7 @@ window.addEventListener("resize", updateWindowSize);
 const textureLoader = new THREE.TextureLoader();
 textureLoader.load("resources/fireplace_2k.jpg", onHdriLoaded);
 textureLoader.load("resources/voronoi_8.png", onVoronoiLoaded);
+textureLoader.load("resources/snow.png", onSnowTextureLoaded);
 
 const objLoader = new OBJLoader();
 objLoader.load("resources/tree.obj", onTreeMeshLoaded);
@@ -37,6 +37,7 @@ objLoader.load("resources/tree.obj", onTreeMeshLoaded);
 // materials that will be reused
 const snowMaterial = new THREE.MeshStandardMaterial( { color: 0xccccff, fog: false } );
 const darkerSnowMaterial = new THREE.MeshStandardMaterial( { color: 0xbbbbee, fog: false } );
+const ppColdEffectMaterial = createColdImageEffectMaterial();
 
 // add lights
 const lights = createLights();
@@ -79,13 +80,16 @@ cameraControls.autoRotateSpeed = 0;
 cameraControls.target.copy(sphere.position);
 cameraControls.target.y -= 0.025;
 
-// before we begin rendering, update the window size one time
-updateWindowSize();
-
 let lastTime = 0;
 // used for dynamic resolution
+let lastResizedTime = 0;
 let stepsCurrInterval = 0;
 let goodRenderTimeCounter = 0;
+// used for image effect opacity
+let ppOpacity = 0.0;
+
+// before we begin rendering, update the window size one time
+updateWindowSize();
 
 function render(time) {
 	time *= 0.001; // convert to seconds
@@ -95,8 +99,6 @@ function render(time) {
 	lastTime = time;
 
 	cameraControls.update();
-
-	updateImageEffectQuad();
 
 	// rotate the glass sphere in a way that the same side faces towards the camera
 	// this way we can save geometry at the side we are looking at without it being obvious
@@ -120,6 +122,19 @@ function render(time) {
 	particles[2].rotation.y = (time/4) % (2*PI);
 	particles[2].rotation.z = (time/7) % (2*PI);
 
+	const camSphereDistance = camera.position.distanceTo(sphere.position);
+	const camInsideSphere = camSphereDistance < 0.11;
+	if (camInsideSphere) {
+		ppOpacity += delta;
+	}
+	else {
+		ppOpacity -= delta;
+	}
+	ppOpacity = THREE.MathUtils.clamp(ppOpacity, 0, 0.5);
+	ppColdEffectMaterial.uniforms["uOpacity"] = {
+		value: ppOpacity
+	};
+
 	// first render the scene, then render post processing "on top"
 	renderer.clear();
 	renderer.render(scene, camera);
@@ -141,9 +156,17 @@ function updateWindowSize() {
 	updateRenderResolution();
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
+
 	ppCamera.aspect = camera.aspect;
 	ppCamera.updateProjectionMatrix();
 	ppCameraHelper.update();
+
+	updateImageEffectQuad();
+	ppColdEffectMaterial.uniforms["uAspectRatio"] = {
+		value: window.innerWidth / window.innerHeight
+	};
+
+	lastResizedTime = lastTime;
 }
 
 function updateDynamicResolution(delta) {
@@ -157,7 +180,7 @@ function updateDynamicResolution(delta) {
 		stepsCurrInterval = 0;
 		goodRenderTimeCounter = 0;
 	}
-	if (delta > 1.0/30) {
+	if (delta > 1.0/30 && lastTime - lastResizedTime > 1.0) {
 		// performance is bad -> instantly lower resolution
 		resolutionScale *= 0.9;
 		resolutionScale = Math.max(0.2, resolutionScale);
@@ -183,6 +206,15 @@ function onVoronoiLoaded(texture) {
 	texture.magFilter = THREE.LinearFilter;
 	texture.colorSpace = THREE.SRGBColorSpace;
 	houseSpotLight.map = texture;
+}
+
+function onSnowTextureLoaded(texture) {
+	texture.minFilter = THREE.LinearFilter;
+	texture.magFilter = THREE.LinearFilter;
+	texture.colorSpace = THREE.SRGBColorSpace;
+	texture.wrapS = THREE.RepeatWrapping;
+	texture.wrapT = THREE.RepeatWrapping;
+	ppColdEffectMaterial.uniforms["uSnowTexture"] = { value: texture };
 }
 
 function onTreeMeshLoaded(mesh) {
@@ -583,12 +615,22 @@ function createImageEffectQuad() {
 		0.0, 0.0,  0.0,
 	]);
 
+	const uvs = new Float32Array([
+		0.0, 0.0,
+		1.0, 0.0,
+		0.0, 1.0,
+		0.0, 1.0,
+		1.0, 0.0,
+		1.0, 1.0,
+	]);
+
 	const geometry = new THREE.BufferGeometry();
 	geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+	geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
 
 	const mesh = new THREE.Mesh(
 		geometry,
-		new THREE.MeshBasicMaterial({ color: 0x0000ff, transparent: true, opacity: 0.1 }),
+		ppColdEffectMaterial,
 	);
 
 	return mesh;
@@ -630,4 +672,18 @@ function updateImageEffectQuad() {
 	quadPosAttribute.setXYZ(5, n[3].x, n[3].y, n[3].z);
 
 	quadPosAttribute.needsUpdate = true;
+}
+
+function createColdImageEffectMaterial() {
+	return new THREE.ShaderMaterial({
+		uniforms: {
+			"uOpacity": { value: 0.6 },
+			"uColor": { value: new THREE.Color(0xaaddff) },
+			"uSnowTexture": { value: undefined }, // do not use another texture!
+			"uAspectRatio": { value: window.innerWidth / window.innerHeight },
+		},
+		vertexShader: document.getElementById("vertex-shader").textContent,
+		fragmentShader: document.getElementById("fragment-shader").textContent,
+		transparent: true,
+	});
 }

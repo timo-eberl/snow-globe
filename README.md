@@ -8,13 +8,13 @@ A snow globe made with three.js for the lecture "113447a Computer Graphics".
 - [x] Orbit Controls -> Camera orbits around a point inside the globe
 - [x] Import at least one 3D model -> tree
 - [x] Materials
-- [x] Texture -> HDRI Map for reflections, spot light noise map
+- [x] Texture -> HDRI Map for reflections, spot light noise map, freeze image effect
 - [x] Light -> directional lights, spot light inside house
 - [x] Camera
 - [x] Shadows
 - [x] Fog -> used in a hacky way to create an effect when entering the globe
 - [x] Simple animation -> snow particles and light inside house
-- [ ] Shader
+- [x] Shader -> post processing "freeze" effect when inside globe
 
 ## Run with Visual Studio Code
 
