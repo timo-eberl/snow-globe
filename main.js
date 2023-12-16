@@ -76,7 +76,7 @@ const cameraControls = new OrbitControls(camera, renderer.domElement);
 cameraControls.minPolarAngle = PI * 0.28;
 cameraControls.maxPolarAngle = PI * 0.6;
 cameraControls.autoRotate = true;
-cameraControls.autoRotateSpeed = 0;
+cameraControls.autoRotateSpeed = -1.0;
 cameraControls.target.copy(sphere.position);
 cameraControls.target.y -= 0.025;
 
@@ -125,10 +125,10 @@ function render(time) {
 	const camSphereDistance = camera.position.distanceTo(sphere.position);
 	const camInsideSphere = camSphereDistance < 0.11;
 	if (camInsideSphere) {
-		ppOpacity += delta;
+		ppOpacity += delta * 0.5;
 	}
 	else {
-		ppOpacity -= delta;
+		ppOpacity -= delta * 0.5;
 	}
 	ppOpacity = THREE.MathUtils.clamp(ppOpacity, 0, 0.5);
 	ppColdEffectMaterial.uniforms["uOpacity"] = {
