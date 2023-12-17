@@ -2,18 +2,23 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
+		<!-- only allow resources from same origin. do not allow iframes -->
+		<meta http-equiv="content-security-policy" content="default-src 'self'; child-src 'none'">
+		<meta name="author" content="Timo Eberl">
 		<title>Snow Globe</title>
 		<link rel="stylesheet" href="/style.css">
 	</head>
 	<body>
-		<script type="importmap">
+		<!-- uncomment this if you want to run the app with a simple local server instead of using
+			a build tool -->
+		<!-- <script type="importmap">
 			{
 			  "imports": {
 				"three": "https://unpkg.com/three@0.159.0/build/three.module.js",
 				"three/addons/": "https://unpkg.com/three@0.159.0/examples/jsm/"
 			  }
 			}
-		</script>
+		</script> -->
 		<script type="x-shader/x-vertex" id="vertex-shader">
 			varying vec2 vUv;
 
@@ -35,7 +40,7 @@
 				float interpolator = smoothstep(0.25, 0.707, dist); // 0-1
 
 				gl_FragColor = vec4(
-					mix(uColor, texture2D(uSnowTexture, vUv * vec2(8.0 * uAspectRatio, 8.0)).rgb, 0.15),
+					mix(uColor, texture2D(uSnowTexture, vUv * vec2(8.*uAspectRatio,8.)).rgb, 0.15),
 					mix(0.0, uOpacity, interpolator)
 				);
 			}

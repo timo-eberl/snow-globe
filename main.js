@@ -27,12 +27,12 @@ document.body.appendChild(renderer.domElement);
 window.addEventListener("resize", updateWindowSize);
 
 const textureLoader = new THREE.TextureLoader();
-textureLoader.load("resources/fireplace_2k.jpg", onHdriLoaded);
-textureLoader.load("resources/voronoi_8.png", onVoronoiLoaded);
-textureLoader.load("resources/snow.png", onSnowTextureLoaded);
+textureLoader.load("fireplace_2k.jpg", onHdriLoaded);
+textureLoader.load("voronoi_8.png", onVoronoiLoaded);
+textureLoader.load("snow.png", onSnowTextureLoaded);
 
 const objLoader = new OBJLoader();
-objLoader.load("resources/tree.obj", onTreeMeshLoaded);
+objLoader.load("tree.obj", onTreeMeshLoaded);
 
 // materials that will be reused
 const snowMaterial = new THREE.MeshStandardMaterial( { color: 0xccccff, fog: false } );
