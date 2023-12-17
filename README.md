@@ -4,17 +4,17 @@ A snow globe made with three.js for the lecture "113447a Computer Graphics".
 
 ## Checklist
 
-- [x] Responsive Design
+- [x] Responsive Design -> Different resolutions works, resizing works, resolution scale is dynamically adjusted to avoid lag
 - [x] Orbit Controls -> Camera orbits around a point inside the globe
 - [x] Import at least one 3D model -> tree
-- [x] Materials
-- [x] Texture -> HDRI Map for reflections, spot light noise map, freeze image effect
+- [x] Materials -> Everywhere
+- [x] Texture -> HDRI Map for reflections, spot light noise map, "freeze" image effect
 - [x] Light -> directional lights, spot light inside house
-- [x] Camera
-- [x] Shadows
+- [x] Camera -> 2 cameras: one renders the scene, one renders the post-processing
+- [x] Shadows -> directional lights and the spot light have shadows
 - [x] Fog -> used in a hacky way to create an effect when entering the globe
 - [x] Simple animation -> snow particles and light inside house
-- [x] Shader -> post processing "freeze" effect when inside globe
+- [x] Shader -> post-processing "freeze" effect when inside globe
 
 ## Run with Visual Studio Code
 
